@@ -38,17 +38,46 @@ canvas{display:block;width:100%;aspect-ratio:800/480;max-width:100%;touch-action
 .toast{position:absolute;left:50%;top:14px;transform:translateX(-50%);background:var(--room);color:var(--ink);
   border:2px solid var(--sun);border-radius:8px;padding:6px 14px;font:700 .8rem var(--f-display);max-width:90%;text-align:center;
   transition:opacity .4s;pointer-events:none}
-.pad{display:flex;justify-content:space-between;align-items:end;gap:10px;flex-wrap:wrap;user-select:none;-webkit-user-select:none;
-  background:var(--panel);border:2px solid var(--line);border-radius:14px;padding:10px}
+/* ---- on-screen controls: an overlay on the game screen ---- */
+html{touch-action:manipulation}   /* no double-tap zoom */
+.screen{--b:clamp(44px,11vmin,76px)}
+.pad{position:absolute;left:0;right:0;bottom:0;z-index:3;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;
+  padding:10px;pointer-events:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .pad:not(.show){display:none}
-.pad .grp{display:flex;gap:8px;align-items:end}
-.pad button{min-width:64px;height:64px;padding:0 10px;border-radius:14px;border:2px solid var(--line);border-bottom-width:5px;background:var(--panel2);
-  color:var(--ink);font:700 .8rem var(--f-display);touch-action:none;cursor:pointer;display:grid;place-items:center;line-height:1.1}
-.pad button .big{font-size:1.4rem}
-.pad button.on{background:var(--line);border-color:var(--sun);transform:translateY(2px)}
-.pad #tJ{min-width:84px;height:84px;border-radius:50%;background:var(--sun);color:var(--room);border-color:#c98a2a}
-.pad #tRun.on{background:var(--hot);color:var(--room);border-color:#b8463b;transform:none}
-.pad #tDash.locked,.pad #tPound.locked,.pad #tFlag.locked{opacity:.4}
+.pad button,.pausebtn{pointer-events:auto;width:var(--b);height:var(--b);padding:0;border-radius:16px;border:2px solid rgba(255,255,255,.55);
+  background:rgba(29,26,44,.5);color:#fff;font:700 .72rem var(--f-display);line-height:1.05;touch-action:none;cursor:pointer;
+  display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
+.dpad{display:flex;gap:8px;pointer-events:auto;touch-action:none}
+.dpad button{width:calc(var(--b)*1.2);height:calc(var(--b)*1.2);font-size:1.5rem}
+.acts{display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.smalls,.bigs{display:flex;gap:8px;align-items:flex-end}
+.smalls button{width:calc(var(--b)*.82);height:calc(var(--b)*.82);font-size:.62rem}
+.pad #tJ{width:calc(var(--b)*1.4);height:calc(var(--b)*1.4);border-radius:50%;background:rgba(255,184,77,.88);color:var(--room);border-color:#fff;font-size:.8rem}
+.pad button.on{background:rgba(255,255,255,.4);border-color:var(--sun)}
+.pad #tRun.on{background:rgba(255,107,91,.9);color:var(--room)}
+.pad .locked{opacity:.35}
+.pausebtn{position:absolute;top:8px;right:8px;z-index:3;width:calc(var(--b)*.7);height:calc(var(--b)*.7);font-size:.9rem}
+.pausebtn:not(.show){display:none}
+.rotate{display:none}
+/* mouse users: smaller and see-through so they don't hide the level */
+body:not(.touch) .screen{--b:46px}
+body:not(.touch) .pad button,body:not(.touch) .pausebtn{opacity:.55}
+body:not(.touch) .pad button:hover,body:not(.touch) .pausebtn:hover{opacity:1}
+/* phones & tablets while playing: the game fills the screen, HUD floats on top */
+body.touch .keys{display:none}
+body.touch.playing{overflow:hidden}
+body.touch.playing .wrap>header,body.touch.playing #hTools{display:none}
+body.touch.playing .screen{position:fixed;inset:0;z-index:20;border:0;border-radius:0;background:#000;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+body.touch.playing canvas{width:100%;height:100%;aspect-ratio:auto;object-fit:contain}
+body.touch.playing .hud{position:fixed;z-index:21;top:env(safe-area-inset-top,0px);left:env(safe-area-inset-left,0px);right:calc(var(--b,60px) + 16px);
+  padding:6px 10px;gap:2px 12px;font-size:.66rem;color:#fff;pointer-events:none;text-shadow:0 1px 2px #000,0 0 6px #000}
+body.touch.playing .hud b{color:#fff}
+body.touch.playing .hud{--b:clamp(44px,11vmin,76px)}
+body.touch.playing .toast{top:42px}
+body.touch.playing .pad{padding:max(10px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-right,0px)) max(10px,env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
+@media (orientation:portrait){body.touch.playing .rotate{display:block;position:absolute;z-index:3;top:40%;left:50%;transform:translateX(-50%);
+  font:700 .7rem var(--f-display);color:#fff;background:rgba(0,0,0,.55);padding:6px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}}
 .item.eq{border-color:var(--leaf)}
 .qty{font:700 .75rem var(--f-display);color:var(--ice)}
 .shopsum{font:400 .75rem var(--f-display);color:var(--muted);margin:0}
@@ -190,27 +219,33 @@ kbd{font:400 .72rem var(--f-display);border:1px solid var(--line);border-bottom-
       <span class="state" id="hState">Standing</span>
     </div>
     <div class="chips" id="hTools"></div>
-    <div class="screen">
+    <div class="screen" id="screen">
       <canvas id="game" width="800" height="480" aria-label="Platform game"></canvas>
       <div class="toast" id="toast" style="opacity:0"></div>
+      <!-- on-screen controls, drawn over the game -->
+      <div class="pad" id="pad" aria-label="Touch controls">
+        <div class="dpad" id="dpad">
+          <button id="tL" aria-label="Walk left" tabindex="-1">◀</button>
+          <button id="tR" aria-label="Walk right" tabindex="-1">▶</button>
+        </div>
+        <div class="acts">
+          <div class="smalls">
+            <button id="tFlag" tabindex="-1">FLAG</button>
+            <button id="tPound" aria-label="Ground pound" tabindex="-1">▼</button>
+            <button id="tDash" tabindex="-1">DASH</button>
+          </div>
+          <div class="bigs">
+            <button id="tRun" aria-pressed="false" tabindex="-1">RUN<br>OFF</button>
+            <button id="tJ" aria-label="Jump" tabindex="-1">▲<br>JUMP</button>
+          </div>
+        </div>
+      </div>
+      <button class="pausebtn" id="tPause" aria-label="Pause" tabindex="-1">II</button>
+      <div class="rotate">Turn sideways for a bigger view</div>
       <div class="overlay" id="ov" hidden>
         <h2 id="ovTitle"></h2>
         <p id="ovText"></p>
         <div class="row" id="ovBtns"></div>
-      </div>
-    </div>
-    <div class="pad" id="pad" aria-label="Touch controls">
-      <div class="grp">
-        <button id="tL" aria-label="Walk left" tabindex="-1"><span class="big">◀</span></button>
-        <button id="tR" aria-label="Walk right" tabindex="-1"><span class="big">▶</span></button>
-      </div>
-      <div class="grp">
-        <button id="tPause" aria-label="Pause" tabindex="-1">II</button>
-        <button id="tFlag" tabindex="-1">FLAG</button>
-        <button id="tPound" aria-label="Ground pound" tabindex="-1"><span class="big">▼</span></button>
-        <button id="tDash" tabindex="-1">DASH</button>
-        <button id="tRun" aria-pressed="false" tabindex="-1">RUN<br>OFF</button>
-        <button id="tJ" aria-label="Jump" tabindex="-1"><span class="big">▲</span>JUMP</button>
       </div>
     </div>
     <div class="keys">
@@ -741,7 +776,21 @@ function bindTouch(id,k){
   const off=e=>{e.preventDefault();if(k!=="dash")keys[k]=false;b.classList.remove("on")};
   b.addEventListener("pointerdown",on);["pointerup","pointercancel","lostpointercapture"].forEach(ev=>b.addEventListener(ev,off));
 }
-bindTouch("tL","left");bindTouch("tR","right");bindTouch("tJ","jump");bindTouch("tDash","dash");
+bindTouch("tJ","jump");bindTouch("tDash","dash");
+// ◀ ▶ pad: one touch zone, so a thumb can slide from left to right without lifting
+(()=>{const z=$("dpad");let pid=null;
+  const set=e=>{const r=z.getBoundingClientRect(),right=e.clientX>r.left+r.width/2;keys.left=!right;keys.right=right;
+    $("tL").classList.toggle("on",!right);$("tR").classList.toggle("on",right)};
+  z.addEventListener("mousedown",e=>e.preventDefault());
+  z.addEventListener("pointerdown",e=>{e.preventDefault();if(state!=="play"||paused)return;pid=e.pointerId;try{z.setPointerCapture(pid)}catch(_){}set(e)});
+  z.addEventListener("pointermove",e=>{if(e.pointerId===pid)set(e)});
+  const end=e=>{if(e.pointerId!==pid)return;pid=null;keys.left=keys.right=false;$("tL").classList.remove("on");$("tR").classList.remove("on")};
+  ["pointerup","pointercancel","lostpointercapture"].forEach(k=>z.addEventListener(k,end));
+})();
+// touch devices get the full-screen game layout; no long-press menus on the game
+const isTouch=()=>matchMedia("(pointer:coarse)").matches||navigator.maxTouchPoints>0;
+document.body.classList.toggle("touch",isTouch());
+$("screen").addEventListener("contextmenu",e=>e.preventDefault());
 function setRunLock(v){runLock=v;keys.run=v;const b=$("tRun");b.classList.toggle("on",v);b.setAttribute("aria-pressed",v);b.innerHTML="RUN<br>"+(v?"ON":"OFF")}
 $("tRun").addEventListener("mousedown",e=>e.preventDefault());
 $("tRun").addEventListener("pointerdown",e=>{e.preventDefault();if(state==="play")setRunLock(!runLock)});
@@ -767,7 +816,9 @@ function show(v){
   $("mapView").hidden=v!=="map";$("shopView").hidden=v!=="shop";$("playView").hidden=v!=="play";$("leadView").hidden=v!=="leaders";
   if(v!=="play")leaveLevelRoom();
   if(v==="leaders"){state=v;renderLeaders()}
-  $("pad").classList.toggle("show",v==="play");
+  $("pad").classList.toggle("show",v==="play");$("tPause").classList.toggle("show",v==="play");
+  document.body.classList.toggle("playing",v==="play");
+  if(v!=="play"&&document.fullscreenElement)document.exitFullscreen?.().catch(()=>{});
   if(v!=="play")state=v;
   if(v==="map")renderMap();if(v==="shop")renderShop();
   wallet();
@@ -782,7 +833,12 @@ function hideOverlay(){$("ov").hidden=true}
 function togglePause(){
   if(state!=="play")return;
   paused=!paused;
-  if(paused){saveNow();overlay("Paused","Your spot is saved. Take a breather.",[["Resume",togglePause],["Restart level",()=>startLevel(L.id),true],["World map",()=>{saveNow();show("map")},true]])}
+  if(paused){saveNow();
+    const btns=[["Resume",togglePause],["Restart level",()=>startLevel(L.id),true],["World map",()=>{saveNow();show("map")},true]];
+    if(document.fullscreenEnabled)btns.push([document.fullscreenElement?"Exit full screen":"Full screen",()=>{
+      const p=document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+      Promise.resolve(p).catch(()=>toast("Full screen isn't available here.")).finally(()=>togglePause())},true]);
+    overlay("Paused","Your spot is saved. Take a breather.",btns)}
   else hideOverlay();
 }
 let toastT=null;
